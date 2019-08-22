@@ -17,4 +17,6 @@ If you'd like, you can package the project up into a portable JAR file using the
 
 ```java -jar xmll-assembly-0.1.jar <name of record element> <infile> <outfile>```
 
+This software is able to process over a gigabyte of input xml per minute on this laptop that I'm using to write this. YMMV.
+
 Happy trees!
