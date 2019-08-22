@@ -1,5 +1,4 @@
 # xmll
-Basic command line utility for shredding a big XML file full of records into a text file with one XML record on each line.
 
 Sometimes you have a BIG XML, and you want, like, a lot of little XMLs? 
 
