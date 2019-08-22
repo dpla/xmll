@@ -17,3 +17,4 @@ If you'd like, you can package the project up into a portable JAR file using the
 
 ```java -jar xmll-assembly-0.1.jar <name of record element> <infile> <outfile>```
 
+Happy trees!
