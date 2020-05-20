@@ -1,16 +1,12 @@
 package dpla.xmll
 
 import java.io._
-import java.net.URI
 import java.util.Date
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream._
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.io.compress.CompressionCodecFactory
-import org.apache.tools.bzip2.CBZip2InputStream
+import org.apache.commons.compress.compressors.bzip2.{BZip2CompressorInputStream, BZip2CompressorOutputStream}
 
 object Main extends App {
   val start = new Date().getTime
@@ -57,13 +53,13 @@ object Main extends App {
       case xml if xml.endsWith(".xml") =>
         Some(new FileInputStream(xml))
 
-      case gzName if gzName.endsWith("gz") || gzName.endsWith("tgz") =>
+      case gzName if gzName.endsWith("gz") =>
         Some(new GZIPInputStream(new FileInputStream(file)))
 
-      case bz2name if bz2name.endsWith("bz2") || bz2name.endsWith("tbz2") =>
-        val inputStream = new FileInputStream(file)
-        inputStream.skip(2)
-        Some(new CBZip2InputStream(inputStream))
+      case bz2name if bz2name.endsWith("bz2") =>
+        // val inputStream = new FileInputStream(file)
+        // inputStream.skip(2)
+        Some(new BZip2CompressorInputStream(new FileInputStream(file)))
 
       case tarName if tarName.endsWith("tar") =>
         Some(new FileInputStream(file))
@@ -73,7 +69,7 @@ object Main extends App {
 
   /**
     * Write output to xml, gz or bz compression
-    * 
+    *
     * @param file
     * @return
     */
@@ -82,19 +78,11 @@ object Main extends App {
       case xml if xml.endsWith(".xml") =>
         Some(new FileOutputStream(xml))
 
-      case gzName if gzName.endsWith("gz") || gzName.endsWith("tgz") =>
+      case gzName if gzName.endsWith("gz") =>
         Some(new GZIPOutputStream(new FileOutputStream(file)))
 
-      case bz2name if bz2name.endsWith("bz2") || bz2name.endsWith("tbz2") =>
-        val config = new Configuration()
-        val codec = new CompressionCodecFactory(config).getCodecByClassName("org.apache.hadoop.io.compress.BZip2Codec")
-        val fs = FileSystem.get(URI.create(file.toString), config)
-        val outputStream = fs.create(new Path(file.toString))
-
-        Some(codec.createOutputStream(outputStream))
-
-//      case tarName if tarName.endsWith("tar") =>
-//        Some(new FileInputStream(file))
+      case bz2name if bz2name.endsWith("bz2") =>
+        Some(new BZip2CompressorOutputStream(new FileOutputStream(file)))
 
       case _ => None
     }
