@@ -1,10 +1,16 @@
 package dpla.xmll
 
-import java.io.{FileInputStream, PrintWriter, StringWriter, Writer}
+import java.io._
+import java.net.URI
 import java.util.Date
+import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
+import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream._
-import XMLStreamConstants._
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.io.compress.CompressionCodecFactory
+import org.apache.tools.bzip2.CBZip2InputStream
 
 object Main extends App {
   val start = new Date().getTime
@@ -12,11 +18,18 @@ object Main extends App {
   val inFile = args(1) //"test.xml" ///Users/michael/NMNHBOTANY_DPLA" //args(1)
   val outFile = args(2) //"out.xmll" //args(2)
 
-  val eventReader = XMLInputFactory.newFactory()
-    .createXMLEventReader(new FileInputStream(inFile))
+
+  val eventReader = getInputStream(new File(inFile)) match {
+    case Some(stream) => XMLInputFactory.newFactory().createXMLEventReader(stream)
+    case None => throw new RuntimeException(s"No valid stream from file $inFile")
+  }
+
   val eventWriterFactory = XMLOutputFactory.newFactory()
 
-  val out = new PrintWriter(outFile)
+  val out = getOutputStream(new File(outFile)) match {
+    case Some(writer) => new PrintWriter(writer)
+    case None => throw new RuntimeException(s"No valid output format for file $outFile")
+  }
 
   //we need to skip past the intro matter (xml declaration, root element(s)
   // and dig to the first document element
@@ -32,6 +45,60 @@ object Main extends App {
 
   val end = new Date().getTime
   println(end - start + " ms.")
+
+  /**
+    * Loads .gz, .tgz, .bz, and .tbz2, and plain old .tar files.
+    *
+    * @param file File to parse
+    * @return TarInputstream of the tar contents
+    */
+  def getInputStream(file: File): Option[InputStream] =
+    file.getName match {
+      case xml if xml.endsWith(".xml") =>
+        Some(new FileInputStream(xml))
+
+      case gzName if gzName.endsWith("gz") || gzName.endsWith("tgz") =>
+        Some(new GZIPInputStream(new FileInputStream(file)))
+
+      case bz2name if bz2name.endsWith("bz2") || bz2name.endsWith("tbz2") =>
+        val inputStream = new FileInputStream(file)
+        inputStream.skip(2)
+        Some(new CBZip2InputStream(inputStream))
+
+      case tarName if tarName.endsWith("tar") =>
+        Some(new FileInputStream(file))
+
+      case _ => None
+    }
+
+  /**
+    * Write output to xml, gz or bz compression
+    * 
+    * @param file
+    * @return
+    */
+  def getOutputStream(file: File): Option[OutputStream] =
+    file.getName match {
+      case xml if xml.endsWith(".xml") =>
+        Some(new FileOutputStream(xml))
+
+      case gzName if gzName.endsWith("gz") || gzName.endsWith("tgz") =>
+        Some(new GZIPOutputStream(new FileOutputStream(file)))
+
+      case bz2name if bz2name.endsWith("bz2") || bz2name.endsWith("tbz2") =>
+        val config = new Configuration()
+        val codec = new CompressionCodecFactory(config).getCodecByClassName("org.apache.hadoop.io.compress.BZip2Codec")
+        val fs = FileSystem.get(URI.create(file.toString), config)
+        val outputStream = fs.create(new Path(file.toString))
+
+        Some(codec.createOutputStream(outputStream))
+
+//      case tarName if tarName.endsWith("tar") =>
+//        Some(new FileInputStream(file))
+
+      case _ => None
+    }
+
 
   def processDocuments(eventReader: XMLEventReader, out: PrintWriter): Unit = {
     while (eventReader.hasNext) {
