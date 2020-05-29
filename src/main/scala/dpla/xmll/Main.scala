@@ -8,6 +8,9 @@ import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream._
 import org.apache.commons.compress.compressors.bzip2.{BZip2CompressorInputStream, BZip2CompressorOutputStream}
 
+import scala.util.{Failure, Success, Try}
+
+
 object Main extends App {
   val start = new Date().getTime
   val documentElement = args(0) //"doc"
@@ -30,11 +33,17 @@ object Main extends App {
   //we need to skip past the intro matter (xml declaration, root element(s)
   // and dig to the first document element
   while (eventReader.hasNext) {
-    val event = eventReader.peek()
-    if (event.isStartElement &&
-        event.asStartElement().getName.getLocalPart == documentElement)
-      processDocuments(eventReader, out) // that's one
-    else eventReader.nextEvent() //skip it
+    Try { eventReader.peek() } match {
+      case Success(event) =>
+        if (event.isStartElement &&
+          event.asStartElement().getName.getLocalPart == documentElement)
+          processDocuments(eventReader, out) // that's one
+        else eventReader.nextEvent() //skip it
+      case Failure(f) =>
+        println(s"Failure ${f.getMessage} ${eventReader.toString}")
+        eventReader.nextEvent() //skip it
+    }
+
   }
 
   out.close()
@@ -57,8 +66,6 @@ object Main extends App {
         Some(new GZIPInputStream(new FileInputStream(file)))
 
       case bz2name if bz2name.endsWith("bz2") =>
-        // val inputStream = new FileInputStream(file)
-        // inputStream.skip(2)
         Some(new BZip2CompressorInputStream(new FileInputStream(file)))
 
       case tarName if tarName.endsWith("tar") =>
