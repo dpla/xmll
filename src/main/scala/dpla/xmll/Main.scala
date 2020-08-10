@@ -7,6 +7,7 @@ import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 import javax.xml.stream.XMLStreamConstants._
 import javax.xml.stream._
 import org.apache.commons.compress.compressors.bzip2.{BZip2CompressorInputStream, BZip2CompressorOutputStream}
+import org.apache.tools.bzip2.CBZip2InputStream
 
 import scala.util.{Failure, Success, Try}
 
@@ -66,7 +67,9 @@ object Main extends App {
         Some(new GZIPInputStream(new FileInputStream(file)))
 
       case bz2name if bz2name.endsWith("bz2") =>
-        Some(new BZip2CompressorInputStream(new FileInputStream(file)))
+        val inputStream = new FileInputStream(file)
+        inputStream.skip(2)
+        Some(new org.apache.tools.bzip2.CBZip2InputStream(inputStream))
 
       case tarName if tarName.endsWith("tar") =>
         Some(new FileInputStream(file))
