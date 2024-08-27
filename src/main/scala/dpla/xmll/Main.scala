@@ -71,22 +71,16 @@ object Main extends App {
         inputStream.skip(2)
         Some(new org.apache.tools.bzip2.CBZip2InputStream(inputStream))
 
-      case tarName if tarName.endsWith("tar") =>
-        Some(new FileInputStream(file))
-
       case _ => None
     }
 
-  /**
-    * Write output to xml, gz or bz compression
-    *
-    * @param file
-    * @return
-    */
   def getOutputStream(file: File): Option[OutputStream] =
     file.getName match {
       case xml if xml.endsWith(".xml") =>
         Some(new FileOutputStream(xml))
+
+      case out if out == "--" =>
+        Some(System.out)
 
       case gzName if gzName.endsWith("gz") =>
         Some(new GZIPOutputStream(new FileOutputStream(file)))
